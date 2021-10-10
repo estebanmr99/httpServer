@@ -1,4 +1,4 @@
-SOURCEC=test.c
+SOURCEC=test.c Server.c
 
 TARGETC=test
 

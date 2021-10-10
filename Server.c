@@ -31,7 +31,7 @@ Server server_constructor(int domain, int service, int protocol,
     if((bind(server.socket, (struct sockaddr *)&server.address,sizeof(server.address))) < 0)
     {
         perror("Failed to bind socket....\n");
-        //exit(1);
+        exit(1);
     }
 
     if(listen(server.socket,server.backlog) < 0)
@@ -42,5 +42,6 @@ Server server_constructor(int domain, int service, int protocol,
 
     server.launch = launch;
 
+    printf("OK\n");
     return server;
 }

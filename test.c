@@ -2,6 +2,7 @@
 #include "Server.h"
 #include <string.h>
 #include <unistd.h>
+#include "HTTPRequest.h"
 
 void launch(Server *server)
 {
@@ -24,8 +25,15 @@ void launch(Server *server)
 }
 int main()
 {
-    struct Server server = server_constructor(AF_INET,SOCK_STREAM, 0,INADDR_ANY, 8000, 10, launch);
-    server.launch(&server);
+    char input[300];
+    strcpy(input,"GET /hello.htm HTTP/1.1\nUser-Agent: Mozilla/4.0 (compatible; MSIE5.01; Windows NT)\nHost: www.tutorialspoint.com\nAccept-Language: en-us\nAccept-Encoding: gzip, deflate\nConnection: Keep-Alive");
+    Server server = server_constructor(AF_INET,SOCK_STREAM, 0,INADDR_ANY, 8000, 10, launch);
+    HTTPRequest request = HTTPRequest_constructor(input);
+
+    printf("%f\n",request.HTTPVersion);
+    printf("%s\n",request.URI);
+
+    //server.launch(&server);
 
     return 0;
 }

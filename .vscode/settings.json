@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "server.h": "c",
-        "Dictionary.C": "cpp"
+        "Dictionary.C": "cpp",
+        "sstream": "c",
+        "ipfinder.h": "c"
     }
 }

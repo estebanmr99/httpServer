@@ -7,6 +7,9 @@
 #include <errno.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <arpa/inet.h>	//inet_addr
+#include <string.h>
+#include <sys/types.h>
 
 typedef struct Server
 {
@@ -16,7 +19,7 @@ typedef struct Server
 
     int protocol;
 
-    u_long interface;
+    char * interface;
 
     int port;
 
@@ -30,6 +33,6 @@ typedef struct Server
 }Server;
 
 //declares a pointer to function that takes argument of type void * and returns pointer of type void *
-Server server_constructor(int domain, int service, int protocol, u_long interface, int port, int backlog, void (*launch)(struct Server *server));
+Server server_constructor(int domain, int service, int protocol, char *interface, int port, int backlog, void (*launch)(struct Server *server));
 
 #endif

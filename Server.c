@@ -1,7 +1,7 @@
 #include "Server.h"
 
 Server server_constructor(int domain, int service, int protocol,
-    u_long interface, int port, int backlog, void (*launch)(Server *server))
+    char *interface, int port, int backlog, void (*launch)(Server *server))
 {
     Server server;
 
@@ -20,7 +20,9 @@ Server server_constructor(int domain, int service, int protocol,
 
     //The htonl function can be used to convert an IPv4 address in host 
     //byte order to the IPv4 address in network byte order.
-    server.address.sin_addr.s_addr = htonl(interface);
+    // server.address.sin_addr.s_addr = htonl(interface);
+    // printf("IP: %s", test.ip);
+    server.address.sin_addr.s_addr = inet_addr(interface);
 
     server.socket = socket(domain,service,protocol); //return socket file descriptor
     if(server.socket == 0){
@@ -42,6 +44,5 @@ Server server_constructor(int domain, int service, int protocol,
 
     server.launch = launch;
 
-    printf("OK\n");
     return server;
 }

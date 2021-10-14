@@ -24,5 +24,4 @@ typedef struct HTTPRequest
 
 HTTPRequest HTTPRequest_constructor(char *request_str);
 
-
 #endif

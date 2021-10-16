@@ -30,6 +30,11 @@ Server server_constructor(int domain, int service, int protocol,
         exit(1);
     }
 
+    int reuse;
+    if (setsockopt(server.socket, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(int)) == -1){
+        printf("Reuse port Error : %s\n", strerror(errno));
+    }
+
     if((bind(server.socket, (struct sockaddr *)&server.address,sizeof(server.address))) < 0)
     {
         perror("Failed to bind socket....\n");

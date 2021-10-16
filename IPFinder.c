@@ -61,11 +61,9 @@ IPFinder finder_constructor(){
 					exit(EXIT_FAILURE);
 				}
 				
-				//printf("address: %s", host);
 				ipfinder.ip = host;
 				return ipfinder;
 			}
-			//printf("\n");
 		}
 	}
 

@@ -1,4 +1,16 @@
 #include "main.h"
+#include <pthread.h>
+
+
+typedef struct Params
+{
+    char* file;
+    ServerType type;
+    int socket;
+
+}Params;
+
+
 
 int writeDataToClient(int sckt, const void *data, int datalen)
 {
@@ -188,32 +200,76 @@ void responsePost(){
 
 }
 
-void launch(Server *server)
+void FIFO(int socket, char* file)
+{
+    responseGet(socket, file, FOLDERPATH);
+    free(file);
+}
+
+void *threaded(void *params)
+{
+
+    Params p = *((Params*)params);
+
+    responseGet(p.socket,p.file,FOLDERPATH);
+}
+
+void launch(Server *server, ServerType type)
 {
     char buffer[30000];
     while(1){
         printf("===== WAITING FOR CONNECTION =====\n");
+        printf("196\n");
         int address_length = sizeof(server->address);
+        printf("198\n");
         int new_socket = accept(server->socket, (struct sockaddr *)&server->address, (socklen_t *)&address_length);
+
+        ///////---------------------///////
+
+        
+        printf("200\n");
         read(new_socket, buffer, 30000);
 
         HTTPRequest request = HTTPRequest_constructor(buffer);
         
+        printf("REQUEST\n");
         if (request.Method == GET || request.Method == POST){
+            printf("GET OR POST\n");
 
             if (request.Method == GET){
                 char *copyRequestURI = malloc(sizeof(char) * (strlen(request.URI) + 1));
                 strcpy(copyRequestURI, request.URI);
+                printf("request %s\n",copyRequestURI);
 
                 char *parameter = malloc(sizeof(char) * (strlen(request.URI) + 1));
+        
                 strncpy(parameter, request.URI, 7);
+                printf("parameter %s\n",parameter);
 
                 if(strcmp(parameter, PARAMETERKEY) == 0){
+                    printf("coincide con file=\n");
                     char *fileName = malloc(sizeof(char) * (strlen(request.URI) + 1));
                     strncpy(fileName, request.URI+7, strlen(request.URI));
-                    
-                    responseGet(new_socket, fileName, FOLDERPATH);
-                    free(fileName);
+
+                    //responseGet(new_socket,fileName,FOLDERPATH);
+                    printf("--------------------------------");
+
+                    if(type.type==1)
+                        FIFO(new_socket,fileName);
+
+                    else if(type.type==2){
+                        pthread_t thread;
+                        Params params;
+                        params.file = fileName;
+                        params.socket = new_socket;
+                        params.type = type;
+                        pthread_create(&thread,NULL,threaded,&params);
+                    }
+
+                    //free(fileName);
+
+
+                        
                 }
                 free(copyRequestURI);
                 free(parameter);
@@ -227,15 +283,58 @@ void launch(Server *server)
     }
 }
 
+
+
+ServerType chooseServer(){
+
+    ServerType server;
+    int flag = 1;
+    int N,T,P;
+
+    while(flag)
+    {
+       
+        T = 0;
+        P = 0;
+
+        scanf("%d",&N);
+
+        if(N>=1 && N<= 5){
+            flag=0;
+                
+            if(N==3)//K hilos
+                scanf("%d",&T);
+
+            if(N==5)//K procesos
+                scanf("%d",&P);
+        server.type = N;
+        server.processes = P;
+        server.threads = T;   
+        }
+        else{
+            printf("Wrong server option\n");
+            sleep(1);
+        }
+
+       
+        system("clear");
+    }
+
+
+
+    return server;
+}
+
 int main()
 {
+
+    ServerType type = chooseServer();
     IPFinder ipObj = finder_constructor();
     printf("IP: %s\n", ipObj.ip);
     printf("Port: %d\n", PORT);
 
     Server server = server_constructor(AF_INET,SOCK_STREAM, 0, ipObj.ip, PORT, 10, launch);
-
-    server.launch(&server);
+    server.launch(&server,type);
 
     close(server.socket);
 

@@ -1,7 +1,7 @@
 #include "Server.h"
 
 Server server_constructor(int domain, int service, int protocol,
-    char *interface, int port, int backlog, void (*launch)(Server *server))
+    char *interface, int port, int backlog, void (*launch)(Server *server, ServerType type))
 {
     Server server;
 

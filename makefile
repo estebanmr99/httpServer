@@ -7,7 +7,7 @@ TARGETC = server
 all: c
 
 c:
-	$(CC) $(SOURCEC) -o $(TARGETC) 
+	$(CC) $(SOURCEC) -o $(TARGETC) -lpthread -lm
 
 clean:
 	-rm -f *.o

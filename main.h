@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include "HTTPRequest.h"
 #include "IPFinder.h"
+#include <pthread.h>
 
 #define PORT 8000
 #define PARAMETERKEY "/?file="
@@ -17,5 +18,6 @@ typedef struct OpenedFile
     long fsize;
     char * msg;
 } OpenedFile;
+
 
 #endif

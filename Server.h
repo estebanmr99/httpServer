@@ -11,6 +11,14 @@
 #include <string.h>
 #include <sys/types.h>
 
+typedef struct ServerType
+{
+    int type;
+    int threads;
+    int processes;
+    
+}ServerType;
+
 typedef struct Server
 {
     int domain;
@@ -29,10 +37,10 @@ typedef struct Server
 
     struct sockaddr_in address;    
 
-    void (*launch)(struct Server *server);
+    void (*launch)(struct Server *server, ServerType type);
 }Server;
 
 //declares a pointer to function that takes argument of type void * and returns pointer of type void *
-Server server_constructor(int domain, int service, int protocol, char *interface, int port, int backlog, void (*launch)(struct Server *server));
+Server server_constructor(int domain, int service, int protocol, char *interface, int port, int backlog, void (*launch)(struct Server *server, ServerType type));
 
 #endif

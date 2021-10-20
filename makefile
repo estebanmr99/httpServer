@@ -1,4 +1,4 @@
-SOURCEC = main.c IPFinder.c Server.c HTTPRequest.c
+SOURCEC = main.c IPFinder.c Server.c HTTPRequest.c Queue.c
 
 TARGETC = server
 

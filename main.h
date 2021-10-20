@@ -7,6 +7,7 @@
 #include "HTTPRequest.h"
 #include "IPFinder.h"
 #include <pthread.h>
+#include "Queue.h"
 
 #define PORT 8000
 #define PARAMETERKEY "/?file="
@@ -19,5 +20,16 @@ typedef struct OpenedFile
     char * msg;
 } OpenedFile;
 
+typedef struct Args
+{
+    ServerType type;
+    int socket;
+
+}Args;
+
+
+pthread_t *pool;
+pthread_mutex_t pool_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t pool_cond = PTHREAD_COND_INITIALIZER;
 
 #endif

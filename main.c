@@ -1,15 +1,4 @@
 #include "main.h"
-#include <pthread.h>
-
-
-typedef struct Params
-{
-    char* file;
-    ServerType type;
-    int socket;
-
-}Params;
-
 
 
 int writeDataToClient(int sckt, const void *data, int datalen)
@@ -200,37 +189,13 @@ void responsePost(){
 
 }
 
-void FIFO(int socket, char* file)
-{
-    responseGet(socket, file, FOLDERPATH);
-    free(file);
-}
-
-void *threaded(void *params)
-{
-
-    Params p = *((Params*)params);
-
-    responseGet(p.socket,p.file,FOLDERPATH);
-}
-
-void launch(Server *server, ServerType type)
+void FIFO(int socket)
 {
     char buffer[30000];
-    while(1){
-        printf("===== WAITING FOR CONNECTION =====\n");
-        printf("196\n");
-        int address_length = sizeof(server->address);
-        printf("198\n");
-        int new_socket = accept(server->socket, (struct sockaddr *)&server->address, (socklen_t *)&address_length);
 
-        ///////---------------------///////
+    read(socket, buffer, 30000);
 
-        
-        printf("200\n");
-        read(new_socket, buffer, 30000);
-
-        HTTPRequest request = HTTPRequest_constructor(buffer);
+    HTTPRequest request = HTTPRequest_constructor(buffer);
         
         printf("REQUEST\n");
         if (request.Method == GET || request.Method == POST){
@@ -239,47 +204,123 @@ void launch(Server *server, ServerType type)
             if (request.Method == GET){
                 char *copyRequestURI = malloc(sizeof(char) * (strlen(request.URI) + 1));
                 strcpy(copyRequestURI, request.URI);
-                printf("request %s\n",copyRequestURI);
 
                 char *parameter = malloc(sizeof(char) * (strlen(request.URI) + 1));
         
                 strncpy(parameter, request.URI, 7);
-                printf("parameter %s\n",parameter);
 
                 if(strcmp(parameter, PARAMETERKEY) == 0){
-                    printf("coincide con file=\n");
                     char *fileName = malloc(sizeof(char) * (strlen(request.URI) + 1));
                     strncpy(fileName, request.URI+7, strlen(request.URI));
 
-                    //responseGet(new_socket,fileName,FOLDERPATH);
-                    printf("--------------------------------");
-
-                    if(type.type==1)
-                        FIFO(new_socket,fileName);
-
-                    else if(type.type==2){
-                        pthread_t thread;
-                        Params params;
-                        params.file = fileName;
-                        params.socket = new_socket;
-                        params.type = type;
-                        pthread_create(&thread,NULL,threaded,&params);
-                    }
-
-                    //free(fileName);
-
-
-                        
+                    responseGet(socket,fileName,FOLDERPATH);   
+                    free(fileName);                     
                 }
                 free(copyRequestURI);
                 free(parameter);
+
             }else if (request.Method == POST){
                 responsePost();                 //Codigo para POST
             }
         }
-        close(new_socket);
+        close(socket);
         strcpy(buffer,"");
-        // free(request.URI);
+        //free(request.URI);
+}
+
+void *threaded(void *args)
+{
+    char buffer[30000];
+
+    int socket = *((int*)args);
+    free(args);
+    
+    read(socket, buffer, 30000);
+
+    HTTPRequest request = HTTPRequest_constructor(buffer);
+        
+    if (request.Method == GET || request.Method == POST){
+
+        if (request.Method == GET){
+            char *copyRequestURI = malloc(sizeof(char) * (strlen(request.URI) + 1));
+            strcpy(copyRequestURI, request.URI);
+
+            char *parameter = malloc(sizeof(char) * (strlen(request.URI) + 1));
+    
+            strncpy(parameter, request.URI, 7);
+
+            if(strcmp(parameter, PARAMETERKEY) == 0){
+                char *fileName = malloc(sizeof(char) * (strlen(request.URI) + 1));
+                strncpy(fileName, request.URI+7, strlen(request.URI));
+
+                responseGet(socket,fileName,FOLDERPATH);   
+                free(fileName);                     
+            }
+            free(copyRequestURI);
+            free(parameter);
+
+        }else if (request.Method == POST){
+            responsePost();                 //Codigo para POST
+        }
+    }
+        close(socket);
+        //free(buffer);
+    pthread_exit(NULL);
+}
+
+void *handle_pool(void *args){
+    while(1)
+    {
+        int *client;
+        pthread_mutex_lock(&pool_mutex);
+        if((client = dequeue()) == NULL){
+            pthread_cond_wait(&pool_cond,&pool_mutex);
+            client = dequeue();
+        }
+        pthread_mutex_unlock(&pool_mutex);
+        if(client != NULL){
+            int c = *((int*)client);
+            FIFO(c);
+        }
+    }
+    
+    
+
+}
+
+void launch(Server *server, ServerType type)
+{
+    if(type.type == 3){
+        pool = malloc(type.threads*sizeof(pthread_t));
+        for(int i = 0; i < type.threads; i++)
+            pthread_create(&pool[i],NULL,handle_pool,NULL);
+    }
+
+    while(1){
+        printf("===== WAITING FOR CONNECTION =====\n");
+        int address_length = sizeof(server->address);
+        int new_socket = accept(server->socket, (struct sockaddr *)&server->address, (socklen_t *)&address_length);
+
+        if(type.type == 1)
+            FIFO(new_socket);
+        else if(type.type == 2)
+        {
+            pthread_t t;
+            int *socket = malloc(sizeof(int));
+            *socket = new_socket;
+            pthread_create(&t,NULL,threaded,socket);
+            //pthread_join(&t,NULL);
+        }     
+        else if(type.type == 3)
+        {
+            printf("here");
+            int *socket = malloc(sizeof(int));
+            *socket = new_socket;
+            pthread_mutex_lock(&pool_mutex);
+            enqueue(socket);
+            pthread_cond_signal(&pool_cond);
+            pthread_mutex_unlock(&pool_mutex);
+        }    
     }
 }
 
@@ -319,15 +360,11 @@ ServerType chooseServer(){
        
         system("clear");
     }
-
-
-
     return server;
 }
 
 int main()
 {
-
     ServerType type = chooseServer();
     IPFinder ipObj = finder_constructor();
     printf("IP: %s\n", ipObj.ip);

@@ -37,10 +37,10 @@ typedef struct Server
 
     struct sockaddr_in address;    
 
-    void (*launch)(struct Server *server, ServerType type);
+    void (*launch)(struct Server *server);
 }Server;
 
 //declares a pointer to function that takes argument of type void * and returns pointer of type void *
-Server server_constructor(int domain, int service, int protocol, char *interface, int port, int backlog, void (*launch)(struct Server *server, ServerType type));
+Server server_constructor(int domain, int service, int protocol, char *interface, int port, int backlog, void (*launch)(struct Server *server));
 
 #endif

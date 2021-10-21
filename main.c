@@ -1,5 +1,108 @@
 #include "main.h"
 
+//is list empty
+int isEmpty() {
+   return headL == NULL;
+}
+
+int lengthList() {
+   int length = 0;
+   struct node *current;
+	
+   for(current = headL; current != NULL; current = current->next){
+      length++;
+   }
+	
+   return length;
+}
+
+//insert link at the first location
+void insertFirst(int key, pthread_t thread) {
+
+   //create a link
+   struct node *link = (struct node*) malloc(sizeof(struct node));
+   link->key = key;
+   link->thread = thread;
+	
+   if(isEmpty()) {
+      //make it the last link
+      last = link;
+   } else {
+      //update first prev link
+      headL->prev = link;
+   }
+
+   //point it to old first link
+   link->next = headL;
+	
+   //point first to new first link
+   headL = link;
+}
+
+//delete a link with given key
+
+struct node* delete(int key) {
+
+   //start from the first link
+   struct node* current = headL;
+   struct node* previous = NULL;
+	
+   //if list is empty
+   if(headL == NULL) {
+      return NULL;
+   }
+
+   //navigate through list
+   while(current->key != key) {
+      //if it is last node
+		
+      if(current->next == NULL) {
+         return NULL;
+      } else {
+         //store reference to current link
+         previous = current;
+			
+         //move to next link
+         current = current->next;             
+      }
+   }
+
+   //found a match, update the link
+   if(current == headL) {
+      //change first to point to next link
+      headL = headL->next;
+   } else {
+      //bypass the current link
+      current->prev->next = current->next;
+   }    
+
+   if(current == last) {
+      //change last to point to prev link
+      last = current->prev;
+   } else {
+      current->next->prev = current->prev;
+   }
+	
+   return current;
+}
+
+//delete first item
+struct node* deleteFirst() {
+
+   //save reference to first link
+   struct node *tempLink = headL;
+	
+   //if only one link
+   if(headL->next == NULL){
+      last = NULL;
+   } else {
+      headL->next->prev = NULL;
+   }
+	
+   headL = headL->next;
+   //return the deleted link
+   return tempLink;
+}
 
 int writeDataToClient(int sckt, const void *data, int datalen)
 {
@@ -225,13 +328,11 @@ void FIFO(int socket)
         }
         close(socket);
         strcpy(buffer,"");
-        //free(request.URI);
 }
 
 void *threaded(void *args)
 {
     char buffer[30000];
-
     int socket = *((int*)args);
     free(args);
     
@@ -263,13 +364,13 @@ void *threaded(void *args)
             responsePost();                 //Codigo para POST
         }
     }
-        close(socket);
-        //free(buffer);
-    pthread_exit(NULL);
+    close(socket);
+    free(delete(pthread_self()));
+    pthread_exit(0);
 }
 
 void *handle_pool(void *args){
-    while(1)
+    while(kill)
     {
         int *client;
         pthread_mutex_lock(&pool_mutex);
@@ -282,36 +383,35 @@ void *handle_pool(void *args){
             int c = *((int*)client);
             FIFO(c);
         }
+        free(client);
     }
-    
-    
-
+    pthread_exit(0);
 }
 
-void launch(Server *server, ServerType type)
+void launch(Server *server)
 {
-    if(type.type == 3){
-        pool = malloc(type.threads*sizeof(pthread_t));
-        for(int i = 0; i < type.threads; i++)
+    if(serverType.type == 3){
+        pool = malloc(serverType.threads*sizeof(pthread_t)); // hay que hacerle free
+        for(int i = 0; i < serverType.threads; i++)
             pthread_create(&pool[i],NULL,handle_pool,NULL);
     }
 
-    while(1){
+    while(kill){
         printf("===== WAITING FOR CONNECTION =====\n");
         int address_length = sizeof(server->address);
         int new_socket = accept(server->socket, (struct sockaddr *)&server->address, (socklen_t *)&address_length);
 
-        if(type.type == 1)
+        if(serverType.type == 1)
             FIFO(new_socket);
-        else if(type.type == 2)
+        else if(serverType.type == 2)
         {
             pthread_t t;
             int *socket = malloc(sizeof(int));
             *socket = new_socket;
             pthread_create(&t,NULL,threaded,socket);
-            //pthread_join(&t,NULL);
+            insertFirst(t, t);
         }     
-        else if(type.type == 3)
+        else if(serverType.type == 3)
         {
             printf("here");
             int *socket = malloc(sizeof(int));
@@ -325,16 +425,13 @@ void launch(Server *server, ServerType type)
 }
 
 
-
 ServerType chooseServer(){
-
     ServerType server;
     int flag = 1;
     int N,T,P;
 
     while(flag)
     {
-       
         T = 0;
         P = 0;
 
@@ -356,24 +453,65 @@ ServerType chooseServer(){
             printf("Wrong server option\n");
             sleep(1);
         }
-
-       
-        system("clear");
     }
     return server;
 }
 
-int main()
-{
-    ServerType type = chooseServer();
+void *serverFunc(void *args) {
     IPFinder ipObj = finder_constructor();
     printf("IP: %s\n", ipObj.ip);
     printf("Port: %d\n", PORT);
 
     Server server = server_constructor(AF_INET,SOCK_STREAM, 0, ipObj.ip, PORT, 10, launch);
-    server.launch(&server,type);
+    server.launch(&server);
+}
+
+void killThreads(){
+    if(serverType.type == 3){
+        for(int i = 0; i < serverType.threads; i++){
+            pthread_cancel(pool[i]);
+        }
+        free(pool);
+    }
+    int lengthOfList = lengthList();
+    if (lengthOfList > 0)
+    {
+        for(int i = 0; i < lengthOfList; i++){
+            node *threadToDelete = deleteFirst();
+            pthread_cancel(threadToDelete->thread);
+            free(threadToDelete);
+        }
+    }
+    pthread_cancel(serverThread);//Pthread_cancel
+    pthread_exit(0);
+}
+
+void killProceces(){
+    
+}
+
+int main()
+{
+    kill = 1;
+    char consoleInput[30];
+    serverType = chooseServer();
+
+    pthread_create(&serverThread,NULL,serverFunc,NULL);
+
+    while(kill){
+        scanf("%s", consoleInput);
+        if (strcmp(consoleInput, "kill") == 0){
+            kill = 0;
+        }
+        strcpy(consoleInput,"");
+    }
 
     close(server.socket);
+    if (serverType.type == 2 || serverType.type == 3){
+        killThreads();
+    } else if (serverType.type == 4 || serverType.type == 5){
+        killProceces();
+    }
 
     return 0;
 }

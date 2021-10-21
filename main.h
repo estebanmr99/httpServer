@@ -27,9 +27,28 @@ typedef struct Args
 
 }Args;
 
+typedef struct node {
+   pthread_t thread;
+   int key;
+	
+   struct node *next;
+   struct node *prev;
+}node;
+
 
 pthread_t *pool;
 pthread_mutex_t pool_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t pool_cond = PTHREAD_COND_INITIALIZER;
+pthread_t serverThread;
+ServerType serverType;
+Server server;
+int kill;
+
+//this link always point to first Link
+struct node *headL = NULL;
+//this link always point to last Link 
+struct node *last = NULL;
+struct node *current = NULL;
+
 
 #endif

@@ -330,6 +330,14 @@ void FIFO(int socket)
         strcpy(buffer,"");
 }
 
+
+void forked(int socket,int pid)
+{
+    printf("Process ID: %d\n",pid);
+    FIFO(socket);
+    exit(0);
+}
+
 void *threaded(void *args)
 {
     char buffer[30000];
@@ -395,32 +403,49 @@ void launch(Server *server)
         for(int i = 0; i < serverType.threads; i++)
             pthread_create(&pool[i],NULL,handle_pool,NULL);
     }
+    if(serverType.type == 4){
 
-    while(kill){
-        printf("===== WAITING FOR CONNECTION =====\n");
-        int address_length = sizeof(server->address);
-        int new_socket = accept(server->socket, (struct sockaddr *)&server->address, (socklen_t *)&address_length);
 
-        if(serverType.type == 1)
-            FIFO(new_socket);
-        else if(serverType.type == 2)
-        {
-            pthread_t t;
-            int *socket = malloc(sizeof(int));
-            *socket = new_socket;
-            pthread_create(&t,NULL,threaded,socket);
-            insertFirst(t, t);
-        }     
-        else if(serverType.type == 3)
-        {
-            printf("here");
-            int *socket = malloc(sizeof(int));
-            *socket = new_socket;
-            pthread_mutex_lock(&pool_mutex);
-            enqueue(socket);
-            pthread_cond_signal(&pool_cond);
-            pthread_mutex_unlock(&pool_mutex);
-        }    
+
+
+    }
+
+    else{
+        while(kill){
+            printf("===== WAITING FOR CONNECTION =====\n");
+            int address_length = sizeof(server->address);
+
+            
+            int new_socket = accept(server->socket, (struct sockaddr *)&server->address, (socklen_t *)&address_length);
+
+            if(serverType.type == 1)
+                FIFO(new_socket);
+            else if(serverType.type == 2)
+            {
+                pthread_t t;
+                int *socket = malloc(sizeof(int));
+                *socket = new_socket;
+                pthread_create(&t,NULL,threaded,socket);
+                insertFirst(t, t);
+            }     
+            else if(serverType.type == 3)
+            {
+                int *socket = malloc(sizeof(int));
+                *socket = new_socket;
+                pthread_mutex_lock(&pool_mutex);
+                enqueue(socket);
+                pthread_cond_signal(&pool_cond);
+                pthread_mutex_unlock(&pool_mutex);
+            }
+            else if(serverType.type == 4)
+            {
+                int childpid;
+                if((childpid = fork()) == 0){
+                    forked(new_socket,getpid());
+                }
+
+            }    
+        }
     }
 }
 

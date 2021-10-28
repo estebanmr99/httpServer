@@ -9,7 +9,7 @@
 #include <pthread.h>
 #include "Queue.h"
 
-#define PORT 8000
+#define PORT 8080
 #define PARAMETERKEY "/?file="
 #define FOLDERPATH "./files/"
 #define NOTFOUNDPAGEPATH "./files/404.html"
@@ -29,6 +29,7 @@ typedef struct Args
 
 typedef struct node {
    pthread_t thread;
+   pid_t pid;
    int key;
 	
    struct node *next;
@@ -42,7 +43,7 @@ pthread_cond_t pool_cond = PTHREAD_COND_INITIALIZER;
 pthread_t serverThread;
 ServerType serverType;
 Server server;
-int kill;
+int killFlag;
 
 //this link always point to first Link
 struct node *headL = NULL;

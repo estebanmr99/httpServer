@@ -1,4 +1,5 @@
 #include "main.h"
+#include <signal.h>
 
 //is list empty
 int isEmpty() {
@@ -17,12 +18,13 @@ int lengthList() {
 }
 
 //insert link at the first location
-void insertFirst(int key, pthread_t thread) {
+void insertFirst(int key, pthread_t thread, pid_t pid) {
 
    //create a link
    struct node *link = (struct node*) malloc(sizeof(struct node));
    link->key = key;
    link->thread = thread;
+   link->pid = pid;
 	
    if(isEmpty()) {
       //make it the last link
@@ -121,7 +123,6 @@ int writeDataToClient(int sckt, const void *data, int datalen)
         pdata += numSent;
         datalen -= numSent;
     }
-
     return 1;
 }
 
@@ -236,11 +237,13 @@ void responseGet(int new_socket, char *fileName, char *path){
 
         if (!writeStrToClient(new_socket, "HTTP/1.1 200 OK\r\n")){
             close(new_socket);
+            return;
         }
 
         sprintf(clen, "Content-length: %ld\r\n", file.fsize);
         if (!writeStrToClient(new_socket, clen)){
             close(new_socket);
+            return;
         }
 
         sprintf(cdisposition, "Content-Disposition: attachment; filename=\"%s\"\r\n", fileName);
@@ -251,10 +254,12 @@ void responseGet(int new_socket, char *fileName, char *path){
 
         if (!writeStrToClient(new_socket, cdisposition)){
             close(new_socket);
+            return;
         }
 
         if (!writeStrToClient(new_socket, ctype)){
             close(new_socket);
+            return;
         }
 
         free(contentType);
@@ -263,24 +268,29 @@ void responseGet(int new_socket, char *fileName, char *path){
 
         if (!writeStrToClient(new_socket, "HTTP/1.1 404 Not Found\r\n")){
             close(new_socket);
+            return;
         }
 
         sprintf(clen, "Content-length: %ld\r\n", file.fsize);
         if (!writeStrToClient(new_socket, clen)){
             close(new_socket);
+            return;
         }
 
         if (!writeStrToClient(new_socket, "Content-Type: text/html\r\n")){
             close(new_socket);
+            return;
         }
     }
 
     if (!writeStrToClient(new_socket, "Connection: close\r\n\r\n") == -1){
         close(new_socket);
+        return;
     }
 
     if (!writeDataToClient(new_socket, file.msg, file.fsize)){
         close(new_socket);
+        return;
     }
 
     printf("The file was sent successfully\n");
@@ -300,34 +310,32 @@ void FIFO(int socket)
 
     HTTPRequest request = HTTPRequest_constructor(buffer);
         
-        printf("REQUEST\n");
-        if (request.Method == GET || request.Method == POST){
-            printf("GET OR POST\n");
+    if (request.Method == GET || request.Method == POST){
 
-            if (request.Method == GET){
-                char *copyRequestURI = malloc(sizeof(char) * (strlen(request.URI) + 1));
-                strcpy(copyRequestURI, request.URI);
+        if (request.Method == GET){
+            char *copyRequestURI = malloc(sizeof(char) * (strlen(request.URI) + 1));
+            strcpy(copyRequestURI, request.URI);
 
-                char *parameter = malloc(sizeof(char) * (strlen(request.URI) + 1));
-        
-                strncpy(parameter, request.URI, 7);
+            char *parameter = malloc(sizeof(char) * (strlen(request.URI) + 1));
+    
+            strncpy(parameter, request.URI, 7);
 
-                if(strcmp(parameter, PARAMETERKEY) == 0){
-                    char *fileName = malloc(sizeof(char) * (strlen(request.URI) + 1));
-                    strncpy(fileName, request.URI+7, strlen(request.URI));
+            if(strcmp(parameter, PARAMETERKEY) == 0){
+                char *fileName = malloc(sizeof(char) * (strlen(request.URI) + 1));
+                strncpy(fileName, request.URI+7, strlen(request.URI));
 
-                    responseGet(socket,fileName,FOLDERPATH);   
-                    free(fileName);                     
-                }
-                free(copyRequestURI);
-                free(parameter);
-
-            }else if (request.Method == POST){
-                responsePost();                 //Codigo para POST
+                responseGet(socket,fileName,FOLDERPATH);   
+                free(fileName);                     
             }
+            free(copyRequestURI);
+            free(parameter);
+
+        }else if (request.Method == POST){
+            responsePost();                 //Codigo para POST
         }
-        close(socket);
-        strcpy(buffer,"");
+    }
+    close(socket);
+    strcpy(buffer,"");
 }
 
 
@@ -335,6 +343,7 @@ void forked(int socket,int pid)
 {
     printf("Process ID: %d\n",pid);
     FIFO(socket);
+    free(delete(pid));
     exit(0);
 }
 
@@ -378,7 +387,7 @@ void *threaded(void *args)
 }
 
 void *handle_pool(void *args){
-    while(kill)
+    while(killFlag)
     {
         int *client;
         pthread_mutex_lock(&pool_mutex);
@@ -405,17 +414,13 @@ void launch(Server *server)
     }
     if(serverType.type == 4){
 
-
-
-
     }
 
     else{
-        while(kill){
+        while(killFlag){
             printf("===== WAITING FOR CONNECTION =====\n");
             int address_length = sizeof(server->address);
 
-            
             int new_socket = accept(server->socket, (struct sockaddr *)&server->address, (socklen_t *)&address_length);
 
             if(serverType.type == 1)
@@ -426,7 +431,8 @@ void launch(Server *server)
                 int *socket = malloc(sizeof(int));
                 *socket = new_socket;
                 pthread_create(&t,NULL,threaded,socket);
-                insertFirst(t, t);
+                pid_t test;
+                insertFirst(t, t, test);
             }     
             else if(serverType.type == 3)
             {
@@ -439,11 +445,12 @@ void launch(Server *server)
             }
             else if(serverType.type == 4)
             {
-                int childpid;
+                pid_t childpid;
                 if((childpid = fork()) == 0){
-                    forked(new_socket,getpid());
+                    pthread_t t;
+                    insertFirst(childpid, t, childpid);
+                    forked(new_socket,childpid);
                 }
-
             }    
         }
     }
@@ -512,21 +519,29 @@ void killThreads(){
 }
 
 void killProceces(){
-    
+    int lengthOfList = lengthList();
+    if (lengthOfList > 0)
+    {
+        for(int i = 0; i < lengthOfList; i++){
+            node *threadToDelete = deleteFirst();
+            kill(threadToDelete->pid, SIGKILL);
+            free(threadToDelete);
+        }
+    }
 }
 
 int main()
 {
-    kill = 1;
+    killFlag = 1;
     char consoleInput[30];
     serverType = chooseServer();
 
     pthread_create(&serverThread,NULL,serverFunc,NULL);
 
-    while(kill){
+    while(killFlag){
         scanf("%s", consoleInput);
-        if (strcmp(consoleInput, "kill") == 0){
-            kill = 0;
+        if (strcmp(consoleInput, "killFlag") == 0){
+            killFlag = 0;
         }
         strcpy(consoleInput,"");
     }

@@ -1,6 +1,7 @@
 #include "HTTPRequest.h"
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 int chooseMethod(char *method){
 
@@ -48,16 +49,7 @@ int chooseMethod(char *method){
 
 HTTPRequest HTTPRequest_constructor(char *request_str)
 {
-    
-    for(int i = 0; i <= strlen(request_str) - 1; i++)
-    {
-        if(request_str[i] == '\n' && request_str[i+1] == '\n')
-            request_str[i+1] = '|';
-    }
     char *request_line = strtok(request_str,"\n");
-    char *header_fields = strtok(NULL,"|");
-    char *body = strtok(NULL,"|");
-
 
     HTTPRequest request;
     char *method = strtok(request_line," ");

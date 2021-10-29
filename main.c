@@ -296,14 +296,18 @@ void responsePost(){
 
 }
 
+
+
+//---------------------------------------------------------------------------------------------------------------------------------------
+// Funcion que realiza la conexion mediante FIFO
 void FIFO(int socket)
 {
     char buffer[30000];
 
-    read(socket, buffer, 30000);
+    read(socket, buffer, 30000); //lee el descriptor del socket
 
-    HTTPRequest request = HTTPRequest_constructor(buffer);
-        
+    HTTPRequest request = HTTPRequest_constructor(buffer); //Construye la estructura del request GET
+    
     if (request.Method == GET || request.Method == POST){
 
         if (request.Method == GET){
@@ -333,14 +337,20 @@ void FIFO(int socket)
 }
 
 
-void forked(int socket,int pid)
+
+//---------------------------------------------------------------------------------------------------------------------------------------
+// Funcion que realiza la conexion al servidor FORKED
+void forked(int socket,int pid) 
 {
     printf("Process ID: %d\n",pid);
-    FIFO(socket);
-    free(delete(pid));
+    FIFO(socket); //se llama a la funcion FIFO porque realiza una unica conexion
+    free(delete(pid)); // se elimina el subproceso para liberar recursos
     exit(0);
 }
 
+
+//---------------------------------------------------------------------------------------------------------------------------------------
+// Funcion que realiza la conexion mediante un hilo, por lo cual debe ser un puntero
 void *threaded(void *args)
 {
     char buffer[30000];
@@ -380,76 +390,114 @@ void *threaded(void *args)
     pthread_exit(0);
 }
 
+
+
+//---------------------------------------------------------------------------------------------------------------------------------------
+// Funcion para el manejo del pool de hilos
 void *handle_pool(void *args){
     while(killFlag)
     {
-        int *client;
-        pthread_mutex_lock(&pool_mutex);
-        if((client = dequeue()) == NULL){
+        int *client;//en cada iteracion puede asignarse un cliente
+        pthread_mutex_lock(&pool_mutex); //bloqueo el pool
+        if((client = dequeue()) == NULL){ //si no hay request que desencolar se duerme el hilo
             pthread_cond_wait(&pool_cond,&pool_mutex);
-            client = dequeue();
+            client = dequeue(); //se despierta y desencola cuando llega un request
         }
-        pthread_mutex_unlock(&pool_mutex);
-        if(client != NULL){
+        pthread_mutex_unlock(&pool_mutex);//se desbloquea el pool
+        if(client != NULL){ // se verifica que sea un socket de cliente valido
             int c = *((int*)client);
-            FIFO(c);
+            FIFO(c); //se llama a FIFO
         }
         free(client);
     }
     pthread_exit(0);
 }
 
+
+
+//---------------------------------------------------------------------------------------------------------------------------------------
+// Funcion que realiza el launch del servidor y elegir el tipo de servidor
 void launch(Server *server)
 {
-    if(serverType.type == 3){
+    if(serverType.type == 3){ //si es un servidor de pool de hilos, se crean los hilos
         pool = malloc(serverType.threads*sizeof(pthread_t)); // hay que hacerle free
         for(int i = 0; i < serverType.threads; i++)
             pthread_create(&pool[i],NULL,handle_pool,NULL);
     }
-    if(serverType.type == 4){
-
+    if(serverType.type == 5){ //si es un servidor de pool de procesos, se crean los procesos necesarios
+        preforked(serverType.processes,server);
     }
 
     else{
         while(killFlag){
             printf("===== WAITING FOR CONNECTION =====\n");
+
             int address_length = sizeof(server->address);
 
             int new_socket = accept(server->socket, (struct sockaddr *)&server->address, (socklen_t *)&address_length);
 
             if(serverType.type == 1)
-                FIFO(new_socket);
+                FIFO(new_socket); //la conexion mas basica FIFO
+
             else if(serverType.type == 2)
             {
-                pthread_t t;
-                int *socket = malloc(sizeof(int));
+                
+                pthread_t t; //creacion de un hilo para cada request
+                int *socket = malloc(sizeof(int)); //se asigna un socket
                 *socket = new_socket;
-                pthread_create(&t,NULL,threaded,socket);
+                pthread_create(&t,NULL,threaded,socket); //se ejecuta el request del hilo al servidor
                 pid_t test;
-                insertFirst(t, t, test);
+                insertFirst(t, t, test); //se guarda el id del hilo en la lista enlazada
             }     
-            else if(serverType.type == 3)
+
+            else if(serverType.type == 3) //pool de hilos
             {
                 int *socket = malloc(sizeof(int));
                 *socket = new_socket;
                 pthread_mutex_lock(&pool_mutex);
-                enqueue(socket);
-                pthread_cond_signal(&pool_cond);
+                enqueue(socket); //se encola el hilo
+                pthread_cond_signal(&pool_cond); // se despierta al primero en la cola
                 pthread_mutex_unlock(&pool_mutex);
             }
-            else if(serverType.type == 4)
+
+            else if(serverType.type == 4) //un proceso
             {
                 pid_t childpid;
                 if((childpid = fork()) == 0){
                     pthread_t t;
                     insertFirst(childpid, t, childpid);
-                    forked(new_socket,childpid);
+                    forked(new_socket,childpid); 
                 }
             }    
         }
     }
 }
 
+
+
+void preforked(int nchildren, Server *server){
+
+  int pid,newsock;
+
+  for (int x = 0; x < nchildren; x++) {
+    if ((pid = fork()) == 0) {
+        pthread_t t;
+        insertFirst(pid, t, pid);
+
+  while (killFlag){
+      
+      int address_length = sizeof(server->address);
+
+      newsock = accept(server->socket, (struct sockaddr *)&server->address, (socklen_t *)&address_length);
+
+      FIFO(newsock);
+    }
+  }
+}
+
+
+  wait(NULL) ;
+}
 
 ServerType chooseServer(){
     ServerType server;

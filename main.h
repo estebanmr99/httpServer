@@ -9,6 +9,8 @@
 #include <pthread.h>
 #include "Queue.h"
 #include <signal.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #define PORT 8000
 #define PARAMETERKEY "/?file=" // Parametro que tiene que enviar el cliente para indicar el archivo a solicitar
@@ -52,5 +54,7 @@ int killFlag;
 struct node *headL = NULL; // Puntero a la cabeza de la lista
 struct node *last = NULL; // Puntero a la cola de la lista
 struct node *current = NULL;
+
+void preforked(int nclients,Server *server);
 
 #endif

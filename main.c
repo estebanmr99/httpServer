@@ -1,83 +1,68 @@
 #include "main.h"
 
-//is list empty
+//---------------------------------------------------------------------------------------------------------------------------------------
+// Funcion que verifica si la lista esta vacia
 int isEmpty() {
    return headL == NULL;
 }
 
+//---------------------------------------------------------------------------------------------------------------------------------------
+// Funcion que retorna la cantidad de elementos en la lista
 int lengthList() {
    int length = 0;
    struct node *current;
 	
    for(current = headL; current != NULL; current = current->next){
       length++;
-   }
-	
+    }
    return length;
 }
 
-//insert link at the first location
-void insertFirst(int key, pthread_t thread) {
+//---------------------------------------------------------------------------------------------------------------------------------------
+// Funcion que inserta un elemento en la primera posicion de la lista
+void insertFirst(int key, pthread_t thread, pid_t pid) {
 
-   //create a link
-   struct node *link = (struct node*) malloc(sizeof(struct node));
-   link->key = key;
-   link->thread = thread;
+    struct node *link = (struct node*) malloc(sizeof(struct node));    // crea el link
+    link->key = key;
+    link->thread = thread;
+    link->pid = pid;
 	
-   if(isEmpty()) {
-      //make it the last link
-      last = link;
-   } else {
-      //update first prev link
-      headL->prev = link;
-   }
+    if(isEmpty()) {
+        last = link; // conviértelo en el último link
+    } else {
+        headL->prev = link;
+    }
 
-   //point it to old first link
-   link->next = headL;
-	
-   //point first to new first link
-   headL = link;
+    link->next = headL; // apuntar al antiguo primer link
+    headL = link;
 }
 
-//delete a link with given key
-
+//---------------------------------------------------------------------------------------------------------------------------------------
+// Funcion que elimina un elemento de la lista dada una llave
 struct node* delete(int key) {
-
-   //start from the first link
    struct node* current = headL;
    struct node* previous = NULL;
 	
-   //if list is empty
-   if(headL == NULL) {
+   if(headL == NULL) { // si la lista esta vacia
       return NULL;
    }
 
-   //navigate through list
-   while(current->key != key) {
-      //if it is last node
-		
+   while(current->key != key) { //navegar sobre la lista		
       if(current->next == NULL) {
          return NULL;
       } else {
-         //store reference to current link
          previous = current;
-			
-         //move to next link
          current = current->next;             
       }
    }
 
-   //found a match, update the link
-   if(current == headL) {
-      //change first to point to next link
+   if(current == headL) { // Si encuentra la cabeza cambia el primer puntero al siguiente
       headL = headL->next;
    } else {
-      //bypass the current link
       current->prev->next = current->next;
    }    
 
    if(current == last) {
-      //change last to point to prev link
       last = current->prev;
    } else {
       current->next->prev = current->prev;
@@ -86,13 +71,11 @@ struct node* delete(int key) {
    return current;
 }
 
-//delete first item
+//---------------------------------------------------------------------------------------------------------------------------------------
+// Funcion que elimina el primer elemento de la lista
 struct node* deleteFirst() {
-
-   //save reference to first link
    struct node *tempLink = headL;
 	
-   //if only one link
    if(headL->next == NULL){
       last = NULL;
    } else {
@@ -100,17 +83,18 @@ struct node* deleteFirst() {
    }
 	
    headL = headL->next;
-   //return the deleted link
    return tempLink;
 }
 
+//---------------------------------------------------------------------------------------------------------------------------------------
+// Funcion que escribre bytes de manera dinamica en socket de la conexion con el cliente
 int writeDataToClient(int sckt, const void *data, int datalen)
 {
     const char *pdata = (const char*) data;
 
-    while (datalen > 0){
+    while (datalen > 0){ // Si todavia quedan bytes por enviar
         int numSent = send(sckt, pdata, datalen, 0);
-        if (numSent <= 0){
+        if (numSent <= 0){ //Si la conexion con el cliente se cerro deja de enviar los bytes
             if (numSent == 0){
                 printf("The client was not written to: disconnected\n");
             } else {
@@ -121,25 +105,28 @@ int writeDataToClient(int sckt, const void *data, int datalen)
         pdata += numSent;
         datalen -= numSent;
     }
-
     return 1;
 }
 
+//---------------------------------------------------------------------------------------------------------------------------------------
+// Funcion de wrapper para enviar bytes al cliente
 int writeStrToClient(int sckt, const char *str)
 {
     return writeDataToClient(sckt, str, strlen(str));
 }
 
+//---------------------------------------------------------------------------------------------------------------------------------------
+// Funcion que abre un archivo dado una direccion en disco y retorna el contenido del archivo con su tamano
 OpenedFile openFile(char *filePath){
     OpenedFile file;
     long fsize;
-    FILE *fp = fopen(filePath, "rb");
+    FILE *fp = fopen(filePath, "rb"); // Abre archivo
     if (!fp){
         perror("The file was not opened");    
         exit(1);
     }
 
-    if (fseek(fp, 0, SEEK_END) == -1){
+    if (fseek(fp, 0, SEEK_END) == -1){ // Verifica que el archivo exista
         perror("The file was not seeked");
         exit(1);
     }
@@ -157,11 +144,11 @@ OpenedFile openFile(char *filePath){
         exit(1);
     }
 
-    if (fread(msg, fsize, 1, fp) != 1){
+    if (fread(msg, fsize, 1, fp) != 1){ // Lee el archivo
         perror("The file was not read\n");
         exit(1);
     }
-    fclose(fp);
+    fclose(fp); // Cierra el archivo
 
     printf("The file size is %ld\n", fsize);
 
@@ -170,6 +157,8 @@ OpenedFile openFile(char *filePath){
     return file;
 }
 
+//---------------------------------------------------------------------------------------------------------------------------------------
+// Funcion que dependiendo del archivo solicitado genera el mimetype del archivo para los headers del response
 char *generateMimeType(const char *extension){
     char *mimeType;
 
@@ -211,12 +200,16 @@ char *generateMimeType(const char *extension){
     return mimeType;
 }
 
+//---------------------------------------------------------------------------------------------------------------------------------------
+// Funcion que obtiene la extension de un archivo para determinar el mimetype
 const char *getFilenameExt(const char *filename) {
     const char *dot = strrchr(filename, '.');
     if(!dot || dot == filename) return "";
     return dot;
 }
 
+//---------------------------------------------------------------------------------------------------------------------------------------
+// Funcion que hace el formato del response de un request GET para enviarlo por el socket
 void responseGet(int new_socket, char *fileName, char *path){
     OpenedFile file;
     char clen[40];
@@ -224,63 +217,72 @@ void responseGet(int new_socket, char *fileName, char *path){
     char cdisposition[80];
 
     printf("Requested file name: %s\n", fileName);
-    int newSize = strlen(path)  + strlen(fileName) + 1;     // Determine new size
-    char * filePathConcat = (char *)malloc(newSize);    // Allocate new buffer
+    int newSize = strlen(path)  + strlen(fileName) + 1;     // Determina el tamano del puntero de la ruta del archivo
+    char * filePathConcat = (char *)malloc(newSize);    // Aparta el tamano del buffer
 
-    // do the copy and concat
+    // hace la copia y concatena la ruta de archivos + el nombre del archivo
     strcpy(filePathConcat, path);
-    strcat(filePathConcat, fileName); // or strncat
+    strcat(filePathConcat, fileName);
 
-    if(access(filePathConcat, F_OK ) == 0){
+    if(access(filePathConcat, F_OK ) == 0){ // Si el achivo existe en la ruta de archivos
         file = openFile(filePathConcat);
 
-        if (!writeStrToClient(new_socket, "HTTP/1.1 200 OK\r\n")){
+        if (!writeStrToClient(new_socket, "HTTP/1.1 200 OK\r\n")){ // Escribe el header del HTTP status
             close(new_socket);
+            return;
         }
 
         sprintf(clen, "Content-length: %ld\r\n", file.fsize);
-        if (!writeStrToClient(new_socket, clen)){
+        if (!writeStrToClient(new_socket, clen)){ // Escribe el header de content length
             close(new_socket);
+            return;
         }
 
-        sprintf(cdisposition, "Content-Disposition: attachment; filename=\"%s\"\r\n", fileName);
+        sprintf(cdisposition, "Content-Disposition: attachment; filename=\"%s\"\r\n", fileName); // Concatena el nombre del archivo al header
 
         const char *fileExtension = getFilenameExt(fileName);
         char *contentType = generateMimeType(fileExtension);
         sprintf(ctype, "Content-Type: %s\r\n", contentType);
 
-        if (!writeStrToClient(new_socket, cdisposition)){
+        if (!writeStrToClient(new_socket, cdisposition)){ // Escribe el header de content Disposition
             close(new_socket);
+            return;
         }
 
-        if (!writeStrToClient(new_socket, ctype)){
+        if (!writeStrToClient(new_socket, ctype)){  // Escribe el header de content type
             close(new_socket);
+            return;
         }
 
         free(contentType);
     } else {
-        file = openFile(NOTFOUNDPAGEPATH);
+        file = openFile(NOTFOUNDPAGEPATH); // En caso de que no exista el archivo se volvera un 404 con un archivo html ya definido
 
-        if (!writeStrToClient(new_socket, "HTTP/1.1 404 Not Found\r\n")){
+        if (!writeStrToClient(new_socket, "HTTP/1.1 404 Not Found\r\n")){ // Escribe el header del HTTP status
             close(new_socket);
+            return;
         }
 
         sprintf(clen, "Content-length: %ld\r\n", file.fsize);
-        if (!writeStrToClient(new_socket, clen)){
+        if (!writeStrToClient(new_socket, clen)){ // Escribe el header de content length
             close(new_socket);
+            return;
         }
 
-        if (!writeStrToClient(new_socket, "Content-Type: text/html\r\n")){
+        if (!writeStrToClient(new_socket, "Content-Type: text/html\r\n")){  // Escribe el header de content type
             close(new_socket);
+            return;
         }
     }
 
-    if (!writeStrToClient(new_socket, "Connection: close\r\n\r\n") == -1){
+    if (!writeStrToClient(new_socket, "Connection: close\r\n\r\n") == -1){ // Escribre que la conexion ya se cerro
         close(new_socket);
+        return;
     }
 
-    if (!writeDataToClient(new_socket, file.msg, file.fsize)){
+    if (!writeDataToClient(new_socket, file.msg, file.fsize)){ // Escribe el contenido del archivo a devolver, ya sea el solicitado el 404
         close(new_socket);
+        return;
     }
 
     printf("The file was sent successfully\n");
@@ -288,6 +290,8 @@ void responseGet(int new_socket, char *fileName, char *path){
     free(filePathConcat);
 }
 
+//---------------------------------------------------------------------------------------------------------------------------------------
+// Funcion que hace el formato del response de un request POST para enviarlo por el socket
 void responsePost(){
 
 }
@@ -300,34 +304,32 @@ void FIFO(int socket)
 
     HTTPRequest request = HTTPRequest_constructor(buffer);
         
-        printf("REQUEST\n");
-        if (request.Method == GET || request.Method == POST){
-            printf("GET OR POST\n");
+    if (request.Method == GET || request.Method == POST){
 
-            if (request.Method == GET){
-                char *copyRequestURI = malloc(sizeof(char) * (strlen(request.URI) + 1));
-                strcpy(copyRequestURI, request.URI);
+        if (request.Method == GET){
+            char *copyRequestURI = malloc(sizeof(char) * (strlen(request.URI) + 1));
+            strcpy(copyRequestURI, request.URI);
 
-                char *parameter = malloc(sizeof(char) * (strlen(request.URI) + 1));
-        
-                strncpy(parameter, request.URI, 7);
+            char *parameter = malloc(sizeof(char) * (strlen(request.URI) + 1));
+    
+            strncpy(parameter, request.URI, 7);
 
-                if(strcmp(parameter, PARAMETERKEY) == 0){
-                    char *fileName = malloc(sizeof(char) * (strlen(request.URI) + 1));
-                    strncpy(fileName, request.URI+7, strlen(request.URI));
+            if(strcmp(parameter, PARAMETERKEY) == 0){
+                char *fileName = malloc(sizeof(char) * (strlen(request.URI) + 1));
+                strncpy(fileName, request.URI+7, strlen(request.URI));
 
-                    responseGet(socket,fileName,FOLDERPATH);   
-                    free(fileName);                     
-                }
-                free(copyRequestURI);
-                free(parameter);
-
-            }else if (request.Method == POST){
-                responsePost();                 //Codigo para POST
+                responseGet(socket,fileName,FOLDERPATH);   
+                free(fileName);                     
             }
+            free(copyRequestURI);
+            free(parameter);
+
+        }else if (request.Method == POST){
+            responsePost();                 //Codigo para POST
         }
-        close(socket);
-        strcpy(buffer,"");
+    }
+    close(socket);
+    strcpy(buffer,"");
 }
 
 
@@ -335,6 +337,7 @@ void forked(int socket,int pid)
 {
     printf("Process ID: %d\n",pid);
     FIFO(socket);
+    free(delete(pid));
     exit(0);
 }
 
@@ -378,7 +381,7 @@ void *threaded(void *args)
 }
 
 void *handle_pool(void *args){
-    while(kill)
+    while(killFlag)
     {
         int *client;
         pthread_mutex_lock(&pool_mutex);
@@ -405,17 +408,13 @@ void launch(Server *server)
     }
     if(serverType.type == 4){
 
-
-
-
     }
 
     else{
-        while(kill){
+        while(killFlag){
             printf("===== WAITING FOR CONNECTION =====\n");
             int address_length = sizeof(server->address);
 
-            
             int new_socket = accept(server->socket, (struct sockaddr *)&server->address, (socklen_t *)&address_length);
 
             if(serverType.type == 1)
@@ -426,7 +425,8 @@ void launch(Server *server)
                 int *socket = malloc(sizeof(int));
                 *socket = new_socket;
                 pthread_create(&t,NULL,threaded,socket);
-                insertFirst(t, t);
+                pid_t test;
+                insertFirst(t, t, test);
             }     
             else if(serverType.type == 3)
             {
@@ -439,11 +439,12 @@ void launch(Server *server)
             }
             else if(serverType.type == 4)
             {
-                int childpid;
+                pid_t childpid;
                 if((childpid = fork()) == 0){
-                    forked(new_socket,getpid());
+                    pthread_t t;
+                    insertFirst(childpid, t, childpid);
+                    forked(new_socket,childpid);
                 }
-
             }    
         }
     }
@@ -512,21 +513,29 @@ void killThreads(){
 }
 
 void killProceces(){
-    
+    int lengthOfList = lengthList();
+    if (lengthOfList > 0)
+    {
+        for(int i = 0; i < lengthOfList; i++){
+            node *threadToDelete = deleteFirst();
+            kill(threadToDelete->pid, SIGKILL);
+            free(threadToDelete);
+        }
+    }
 }
 
 int main()
 {
-    kill = 1;
+    killFlag = 1;
     char consoleInput[30];
     serverType = chooseServer();
 
     pthread_create(&serverThread,NULL,serverFunc,NULL);
 
-    while(kill){
+    while(killFlag){
         scanf("%s", consoleInput);
-        if (strcmp(consoleInput, "kill") == 0){
-            kill = 0;
+        if (strcmp(consoleInput, "killFlag") == 0){
+            killFlag = 0;
         }
         strcpy(consoleInput,"");
     }

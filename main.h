@@ -8,32 +8,38 @@
 #include "IPFinder.h"
 #include <pthread.h>
 #include "Queue.h"
+#include <signal.h>
 
 #define PORT 8000
-#define PARAMETERKEY "/?file="
-#define FOLDERPATH "./files/"
-#define NOTFOUNDPAGEPATH "./files/404.html"
+#define PARAMETERKEY "/?file=" // Parametro que tiene que enviar el cliente para indicar el archivo a solicitar
+#define FOLDERPATH "./files/" // Ruta donde se encuentran los archivos disponibles del servidor
+#define NOTFOUNDPAGEPATH "./files/404.html" // Archivo de 404 cuando la solicitud falla
 
+// Struct para guardar la informacion del archivo que se abrio dado X request
+// Guarda el tamaño del archivo y el contenido del archivo
 typedef struct OpenedFile
 {
     long fsize;
     char * msg;
 } OpenedFile;
 
+// Struct para agrupar la informacion del tipo de modo del servidor y el socket
 typedef struct Args
 {
     ServerType type;
     int socket;
 
-}Args;
+} Args;
 
+
+// Struct para las lista enlazada doble para mantener trackeo de los hilos o procesos creados
 typedef struct node {
    pthread_t thread;
+   pid_t pid;
    int key;
-	
    struct node *next;
    struct node *prev;
-}node;
+} node;
 
 
 pthread_t *pool;
@@ -42,13 +48,9 @@ pthread_cond_t pool_cond = PTHREAD_COND_INITIALIZER;
 pthread_t serverThread;
 ServerType serverType;
 Server server;
-int kill;
-
-//this link always point to first Link
-struct node *headL = NULL;
-//this link always point to last Link 
-struct node *last = NULL;
+int killFlag;
+struct node *headL = NULL; // Puntero a la cabeza de la lista
+struct node *last = NULL; // Puntero a la cola de la lista
 struct node *current = NULL;
-
 
 #endif

@@ -1,33 +1,29 @@
-/*
- * Find local ip used as source ip in ip packets.
- * Read the /proc/net/route file
- */
-
 #include "IPFinder.h"
 
+// Funcion para encontrar la IP local en los paquetes de IP
 IPFinder finder_constructor(){
 	IPFinder ipfinder;
 	FILE *f;
     char line[100] , *p , *c;
     
+	// Leer del archivo /proc/net/route para obtener las interfaces de red
     f = fopen("/proc/net/route" , "r");
     
-    while(fgets(line , 100 , f))
+    while(fgets(line, 100, f))
     {
 		p = strtok(line , " \t");
 		c = strtok(NULL , " \t");
 		
 		if(p!=NULL && c!=NULL)
 		{
-			if(strcmp(c , "00000000") == 0)
+			if(strcmp(c , "00000000") == 0) // Si es "00000000" es porque se encontro la interfaz de red
 			{
-				// printf("Default interface is : %s \n" , p);
 				break;
 			}
 		}
 	}
     
-    //which family do we require , AF_INET or AF_INET6
+    // se determina cual es la familia que se quiere, AF_INET or AF_INET6
     int fm = AF_INET;
     struct ifaddrs *ifaddr, *ifa;
 	int family , s;
@@ -39,19 +35,16 @@ IPFinder finder_constructor(){
 		exit(EXIT_FAILURE);
 	}
 
-	//Walk through linked list, maintaining head pointer so we can free list later
+	// Itera por la lista vinculada, manteniendo el puntero principal para liberar la lista más tarde
 	for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) 
 	{
 		if (ifa->ifa_addr == NULL)
-		{
 			continue;
-		}
 
 		family = ifa->ifa_addr->sa_family;
-
 		if(strcmp( ifa->ifa_name , p) == 0)
 		{
-			if (family == fm) 
+			if (family == fm) // Cuando encuentra la familia encuentr la IP
 			{
 				s = getnameinfo( ifa->ifa_addr, (family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6) , host , NI_MAXHOST , NULL , 0 , NI_NUMERICHOST);
 				
@@ -60,12 +53,10 @@ IPFinder finder_constructor(){
 					printf("getnameinfo() failed: %s\n", gai_strerror(s));
 					exit(EXIT_FAILURE);
 				}
-				
-				ipfinder.ip = host;
-				return ipfinder;
+				ipfinder.ip = host; 
+				return ipfinder; // retorna la IP encontrada
 			}
 		}
 	}
-
 	freeifaddrs(ifaddr);
 }

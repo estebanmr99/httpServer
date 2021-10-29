@@ -2,6 +2,7 @@
 
 #define HTTPRequest_h
 
+// ENUM para clasificar los diferentes tipos de metodos HTTP
 typedef enum HTTPMethods
 {
     GET,
@@ -15,6 +16,7 @@ typedef enum HTTPMethods
     TRACE
 }HTTPMethods;
 
+// Struct para guardar la informacion de requests
 typedef struct HTTPRequest
 {
     int Method;
@@ -22,6 +24,7 @@ typedef struct HTTPRequest
     float HTTPVersion;
 }HTTPRequest;
 
+// Metodo para deconstruir el request en el struct de HTTPRequest
 HTTPRequest HTTPRequest_constructor(char *request_str);
 
 #endif

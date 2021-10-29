@@ -9,13 +9,14 @@
 #include<stdlib.h>
 #include<unistd.h>
 
+// Struct para almancer la direccion IP disponible en la interdaz de red
 typedef struct IPFinder
 {
     char *ip;
-}IPFinder;
+} IPFinder;
 
 
-//declares a pointer to function that takes argument of type void * and returns pointer of type void *
+// Constructor para crear un objeto de IPFinder 
 IPFinder finder_constructor();
 
 #endif

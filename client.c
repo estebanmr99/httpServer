@@ -15,7 +15,6 @@ int create_request(char * url, char * port, char * R);
 int isValidIP(char * ip);
 void * send_request();
 
-int sockfd;
 char * url, * R, * portNumber;
 int T, H;
 ssize_t received;
@@ -41,17 +40,19 @@ int main(int argc, char**argv) {
 }
 
 void * send_request(){
+    int sockfd;
+    long int temp;
     for (int i = 0; i < T; i++) {
         sockfd = create_request(url, portNumber, R);
 
         memset(&buffer, 0, sizeof(buffer));
-        while (recv(sockfd, buffer, BUF_SIZE, 0) > 0) { //receives the file
-            received+=recv(sockfd, buffer, BUF_SIZE, 0);
-            fwrite(buffer,1,BUF_SIZE,stdout);
+        temp = recv(sockfd, buffer, BUF_SIZE, 0);
+        while (temp > 0) { //receives the file
+            received+=temp;
+            temp = recv(sockfd, buffer, BUF_SIZE, 0);
             memset(&buffer, 0, sizeof(buffer));
         }
 
-        fwrite(buffer,1,BUF_SIZE,stdout);
         printf("\nreceived: %ld\n", received);
         close(sockfd);
     }
@@ -80,12 +81,15 @@ int create_request(char * url, char * port, char * R) {
     addr.sin_addr.s_addr = inet_addr(url);
     addr.sin_port = htons(atoi(port));
 
+    //inicia tiempo espera
     if (connect(sockfd, (struct sockaddr *) &addr, sizeof(addr)) < 0 ) {
         printf("Connection Error!\n");
         exit(1);
     }
+    //termina tiempo espera
     printf("Connection successful...\n\n\n");
 
+    //empieza tiempo atencion
     // writes the HTTP GET Request to the sockfd
     write(sockfd, getrequest, strlen(getrequest));
 

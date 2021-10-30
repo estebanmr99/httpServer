@@ -12,14 +12,11 @@ Server server_constructor(int domain, int service, int protocol, char *interface
     server.backlog = backlog;
 
     server.address.sin_family = domain;
+    server.address.sin_port = htons(port);     // La función htons se puede utilizar para convertir un número de puerto IP en el host
+                                               // orden de bytes al número de puerto IP en orden de bytes de red.
 
-    // La función htons se puede utilizar para convertir un número de puerto IP en el host
-    // orden de bytes al número de puerto IP en orden de bytes de red.
-    server.address.sin_port = htons(port);
-
-    // La función htonl se puede utilizar para convertir una dirección IPv4 en el host
-    // orden de bytes a la dirección IPv4 en orden de bytes de red.
-    server.address.sin_addr.s_addr = inet_addr(interface);
+    server.address.sin_addr.s_addr = inet_addr(interface);     // La función htonl se puede utilizar para convertir una dirección IPv4 en el host
+                                                               // orden de bytes a la dirección IPv4 en orden de bytes de red.
 
     server.socket = socket(domain,service,protocol); // Devuelve el descriptor del archivo de socket 
     if(server.socket == 0){
@@ -28,18 +25,15 @@ Server server_constructor(int domain, int service, int protocol, char *interface
     }
 
     int reuse;
-    if (setsockopt(server.socket, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(int)) == -1){ // Si el socket no se esta usando lo usa
+    if (setsockopt(server.socket, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(int)) == -1) // Si el socket no se esta usando lo usa
         printf("Reuse port Error : %s\n", strerror(errno));
-    }
 
-    if((bind(server.socket, (struct sockaddr *)&server.address,sizeof(server.address))) < 0)
-    {
+    if((bind(server.socket, (struct sockaddr *)&server.address,sizeof(server.address))) < 0){
         perror("Failed to bind socket....\n");
         exit(1);
     }
 
-    if(listen(server.socket,server.backlog) < 0)
-    {
+    if(listen(server.socket,server.backlog) < 0){
         perror("Failed to start listening....\n");
         exit(1);
     }

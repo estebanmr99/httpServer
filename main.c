@@ -340,10 +340,16 @@ void FIFO(int socket)
 // Funcion que realiza la conexion al servidor FORKED
 void forked(int socket,int pid) 
 {
-    printf("Process ID: %d\n",pid);
     FIFO(socket); //se llama a la funcion FIFO porque realiza una unica conexion
-    free(delete(pid)); // se elimina el subproceso para liberar recursos
-    exit(0);
+    int lengthOfList = lengthList();
+    if (lengthOfList > 0)
+    {
+        for(int i = 0; i < lengthOfList; i++){
+            node *threadToDelete = deleteFirst();
+            free(threadToDelete);
+        }
+    }
+    _exit(3);
 }
 
 //---------------------------------------------------------------------------------------------------------------------------------------
@@ -383,7 +389,9 @@ void *threaded(void *args)
         }
     }
     close(socket);
+    pthread_mutex_lock(&listMutex);
     free(delete(pthread_self()));
+    pthread_mutex_unlock(&listMutex);
     pthread_exit(0);
 }
 
@@ -451,11 +459,12 @@ void launch(Server *server)
         } else if(serverType.type == 4) { //un proceso
             pid_t childpid;
             if((childpid = fork()) == 0){
-                pthread_t t;
-                insertFirst(childpid, t, childpid);
                 forked(new_socket,childpid); 
             } else {
+                pthread_t t;
+                insertFirst(childpid, t, childpid);
                 close(new_socket);
+                wait(NULL);
             }
         }    
     }
@@ -468,14 +477,25 @@ void preforked(int nchildren, Server *server)
     int pid, newsock;
     for (int x = 0; x < nchildren; x++) { // Deja solo X cantidad de hilos vivir
         if ((pid = fork()) == 0){
-            pthread_t t;
-            insertFirst(pid, t, pid);
-
             while (killFlag){ // Mientras no haya cambie el flag de kill
+                printf("===== WAITING FOR CONNECTION =====\n");
+
                 int address_length = sizeof(server->address);
                 newsock = accept(server->socket, (struct sockaddr *)&server->address, (socklen_t *)&address_length);
                 FIFO(newsock);
+                
+                int lengthOfList = lengthList();
+                if (lengthOfList > 0)
+                {
+                    for(int i = 0; i < lengthOfList; i++){
+                        node *threadToDelete = deleteFirst();
+                        free(threadToDelete);
+                    }
+                }
             }
+        } else {
+            pthread_t t;
+            insertFirst(pid, t, pid);
         }
     }
     wait(NULL);
@@ -505,7 +525,9 @@ void killThreads(){
     if (lengthOfList > 0)
     {
         for(int i = 0; i < lengthOfList; i++){
+            pthread_mutex_lock(&listMutex);
             node *threadToDelete = deleteFirst();
+            pthread_mutex_unlock(&listMutex);
             pthread_cancel(threadToDelete->thread);
             free(threadToDelete);
         }

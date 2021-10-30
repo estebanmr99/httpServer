@@ -12,7 +12,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-#define PORT 8001
+#define PORT 8000
 #define PARAMETERKEY "/?file=" // Parametro que tiene que enviar el cliente para indicar el archivo a solicitar
 #define FOLDERPATH "./files/" // Ruta donde se encuentran los archivos disponibles del servidor
 #define NOTFOUNDPAGEPATH "./files/404.html" // Archivo de 404 cuando la solicitud falla
@@ -46,6 +46,7 @@ typedef struct node {
 
 pthread_t *pool;
 pthread_mutex_t pool_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t listMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t pool_cond = PTHREAD_COND_INITIALIZER;
 pthread_t serverThread;
 ServerType serverType;

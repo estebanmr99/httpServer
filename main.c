@@ -296,8 +296,6 @@ void responsePost(){
 
 }
 
-
-
 //---------------------------------------------------------------------------------------------------------------------------------------
 // Funcion que realiza la conexion mediante FIFO
 void FIFO(int socket)
@@ -348,7 +346,6 @@ void forked(int socket,int pid)
     exit(0);
 }
 
-
 //---------------------------------------------------------------------------------------------------------------------------------------
 // Funcion que realiza la conexion mediante un hilo, por lo cual debe ser un puntero
 void *threaded(void *args)
@@ -390,8 +387,6 @@ void *threaded(void *args)
     pthread_exit(0);
 }
 
-
-
 //---------------------------------------------------------------------------------------------------------------------------------------
 // Funcion para el manejo del pool de hilos
 void *handle_pool(void *args){
@@ -413,8 +408,6 @@ void *handle_pool(void *args){
     pthread_exit(0);
 }
 
-
-
 //---------------------------------------------------------------------------------------------------------------------------------------
 // Funcion que realiza el launch del servidor y elegir el tipo de servidor
 void launch(Server *server)
@@ -424,122 +417,83 @@ void launch(Server *server)
         for(int i = 0; i < serverType.threads; i++)
             pthread_create(&pool[i],NULL,handle_pool,NULL);
     }
+
     if(serverType.type == 5){ //si es un servidor de pool de procesos, se crean los procesos necesarios
         preforked(serverType.processes,server);
     }
 
-    else{
-        while(killFlag){
-            printf("===== WAITING FOR CONNECTION =====\n");
+    while(killFlag){
+        printf("===== WAITING FOR CONNECTION =====\n");
 
-            int address_length = sizeof(server->address);
+        int address_length = sizeof(server->address);
 
-            int new_socket = accept(server->socket, (struct sockaddr *)&server->address, (socklen_t *)&address_length);
+        int new_socket = accept(server->socket, (struct sockaddr *)&server->address, (socklen_t *)&address_length);
 
-            if(serverType.type == 1)
-                FIFO(new_socket); //la conexion mas basica FIFO
+        if(serverType.type == 1)
+            FIFO(new_socket); //la conexion mas basica FIFO
 
-            else if(serverType.type == 2)
-            {
-                
-                pthread_t t; //creacion de un hilo para cada request
-                int *socket = malloc(sizeof(int)); //se asigna un socket
-                *socket = new_socket;
-                pthread_create(&t,NULL,threaded,socket); //se ejecuta el request del hilo al servidor
-                pid_t test;
-                insertFirst(t, t, test); //se guarda el id del hilo en la lista enlazada
-            }     
+        else if(serverType.type == 2){
+            pthread_t t; //creacion de un hilo para cada request
+            int *socket = malloc(sizeof(int)); //se asigna un socket
+            *socket = new_socket;
+            pthread_create(&t,NULL,threaded,socket); //se ejecuta el request del hilo al servidor
+            pid_t test;
+            insertFirst(t, t, test); //se guarda el id del hilo en la lista enlazada
 
-            else if(serverType.type == 3) //pool de hilos
-            {
-                int *socket = malloc(sizeof(int));
-                *socket = new_socket;
-                pthread_mutex_lock(&pool_mutex);
-                enqueue(socket); //se encola el hilo
-                pthread_cond_signal(&pool_cond); // se despierta al primero en la cola
-                pthread_mutex_unlock(&pool_mutex);
+        } else if(serverType.type == 3){ //pool de hilos
+            int *socket = malloc(sizeof(int));
+            *socket = new_socket;
+            pthread_mutex_lock(&pool_mutex);
+            enqueue(socket); //se encola el hilo
+            pthread_cond_signal(&pool_cond); // se despierta al primero en la cola
+            pthread_mutex_unlock(&pool_mutex);
+
+        } else if(serverType.type == 4) { //un proceso
+            pid_t childpid;
+            if((childpid = fork()) == 0){
+                pthread_t t;
+                insertFirst(childpid, t, childpid);
+                forked(new_socket,childpid); 
+            } else {
+                close(new_socket);
             }
-
-            else if(serverType.type == 4) //un proceso
-            {
-                pid_t childpid;
-                if((childpid = fork()) == 0){
-                    pthread_t t;
-                    insertFirst(childpid, t, childpid);
-                    forked(new_socket,childpid); 
-                }
-            }    
-        }
+        }    
     }
 }
 
+//---------------------------------------------------------------------------------------------------------------------------------------
+// Funcion que realiza hace el pool de procesos para el modo de preforked
+void preforked(int nchildren, Server *server)
+{
+    int pid, newsock;
+    for (int x = 0; x < nchildren; x++) { // Deja solo X cantidad de hilos vivir
+        if ((pid = fork()) == 0){
+            pthread_t t;
+            insertFirst(pid, t, pid);
 
-
-void preforked(int nchildren, Server *server){
-
-  int pid,newsock;
-
-  for (int x = 0; x < nchildren; x++) {
-    if ((pid = fork()) == 0) {
-        pthread_t t;
-        insertFirst(pid, t, pid);
-
-  while (killFlag){
-      
-      int address_length = sizeof(server->address);
-
-      newsock = accept(server->socket, (struct sockaddr *)&server->address, (socklen_t *)&address_length);
-
-      FIFO(newsock);
-    }
-  }
-}
-
-
-  wait(NULL) ;
-}
-
-ServerType chooseServer(){
-    ServerType server;
-    int flag = 1;
-    int N,T,P;
-
-    while(flag)
-    {
-        T = 0;
-        P = 0;
-
-        scanf("%d",&N);
-
-        if(N>=1 && N<= 5){
-            flag=0;
-                
-            if(N==3)//K hilos
-                scanf("%d",&T);
-
-            if(N==5)//K procesos
-                scanf("%d",&P);
-        server.type = N;
-        server.processes = P;
-        server.threads = T;   
-        }
-        else{
-            printf("Wrong server option\n");
-            sleep(1);
+            while (killFlag){ // Mientras no haya cambie el flag de kill
+                int address_length = sizeof(server->address);
+                newsock = accept(server->socket, (struct sockaddr *)&server->address, (socklen_t *)&address_length);
+                FIFO(newsock);
+            }
         }
     }
-    return server;
+    wait(NULL);
 }
 
+//---------------------------------------------------------------------------------------------------------------------------------------
+// Funcion que encuentra la IP de la interfaz e inicia el servidor
 void *serverFunc(void *args) {
     IPFinder ipObj = finder_constructor();
     printf("IP: %s\n", ipObj.ip);
     printf("Port: %d\n", PORT);
 
-    Server server = server_constructor(AF_INET,SOCK_STREAM, 0, ipObj.ip, PORT, 10, launch);
+    Server server = server_constructor(AF_INET,SOCK_STREAM, 0, ipObj.ip, PORT, 300, launch);
     server.launch(&server);
 }
 
+//---------------------------------------------------------------------------------------------------------------------------------------
+// Funcion que mata todos los hilos en caso de que haya que un mensaje de kill
 void killThreads(){
     if(serverType.type == 3){
         for(int i = 0; i < serverType.threads; i++){
@@ -560,6 +514,8 @@ void killThreads(){
     pthread_exit(0);
 }
 
+//---------------------------------------------------------------------------------------------------------------------------------------
+// Funcion que mata todos los procesos en caso de que haya que un mensaje de kill
 void killProceces(){
     int lengthOfList = lengthList();
     if (lengthOfList > 0)
@@ -572,17 +528,33 @@ void killProceces(){
     }
 }
 
-int main()
+//---------------------------------------------------------------------------------------------------------------------------------------
+// Funcion main
+int main(int argc, char**argv)
 {
-    killFlag = 1;
+    int N;
+    int T = 0;
+    int P = 0;
     char consoleInput[30];
-    serverType = chooseServer();
 
-    pthread_create(&serverThread,NULL,serverFunc,NULL);
+    N = atoi(argv[1]); // Lee el modo del servidor
+    if (N == 3){ // Si es pre threaded o pre forked se ocupa un N
+        T = atoi(argv[2]); 
+    } else if (N == 5){
+        P = atoi(argv[2]);
+    }
+
+    serverType.type = N;
+    serverType.processes = P;
+    serverType.threads = T;   
+
+    killFlag = 1;
+
+    pthread_create(&serverThread,NULL,serverFunc,NULL); // Crea el hilo donde esta funcionando todo
 
     while(killFlag){
         scanf("%s", consoleInput);
-        if (strcmp(consoleInput, "killFlag") == 0){
+        if (strcmp(consoleInput, "kill") == 0){ // Si hay un mensaje por consola que se kill mata el servidor
             killFlag = 0;
         }
         strcpy(consoleInput,"");

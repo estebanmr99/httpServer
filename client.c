@@ -207,7 +207,7 @@ void mostrar_estadisticas() {
     printf("Tiempo total de espera: %ld segundos\n", total_espera);
     printf("Tiempo de atencion promedio: %ld segundos\n", atencion_promedio);
     printf("Tiempo de espera promedio: %ld segundos\n", espera_promedio);
-    printf("Varianza en el tiempo de atencion: %ldz\n", varianza_atencion);
+    printf("Varianza en el tiempo de atencion: %ld\n", varianza_atencion);
     printf("Varianza de tiempos de espera: %ld\n", varianza_espera);
     printf("Bytes recibidos: %ld\n\n", received);
 }

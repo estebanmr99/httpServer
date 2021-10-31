@@ -508,7 +508,7 @@ void *serverFunc(void *args) {
     printf("IP: %s\n", ipObj.ip);
     printf("Port: %d\n", PORT);
 
-    Server server = server_constructor(AF_INET,SOCK_STREAM, 0, ipObj.ip, PORT, 300, launch);
+    Server server = server_constructor(AF_INET,SOCK_STREAM, 0, ipObj.ip, PORT, 5000, launch);
     server.launch(&server);
 }
 

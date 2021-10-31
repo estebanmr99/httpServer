@@ -1,13 +1,18 @@
-SOURCEC = main.c IPFinder.c Server.c HTTPRequest.c Queue.c
+SOURCEC1 = main.c IPFinder.c Server.c HTTPRequest.c Queue.c
+TARGETC1 = server
 
-TARGETC = server
+SOURCEC2 = client.c
+TARGETC2 = client
 
 .PHONY: all
 
-all: c
+all: c1 c2
 
-c:
-	$(CC) $(SOURCEC) -o $(TARGETC) -lpthread -lm
+c1:
+	$(CC) $(SOURCEC1) -o $(TARGETC1) -lpthread -lm
+
+c2:
+	$(CC) $(SOURCEC2) -o $(TARGETC2) -lpthread
 
 clean:
 	-rm -f *.o

@@ -31,7 +31,6 @@ int chooseMethod(char *method){
 // Metodo para deconstruir el request en el struct de HTTPRequest
 HTTPRequest HTTPRequest_constructor(char *request_str)
 {
-    printf("%s \n", request_str);
     char *request_line = strtok(request_str,"\n");
 
     HTTPRequest request;

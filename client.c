@@ -16,7 +16,7 @@
 // Funciones del programa
 int create_request(char * dir, char * port, char * R);
 int isValidIP(char * ip);
-void * send_request();
+void * client();
 void mostrar_estadisticas();
 
 // Variables globales del programa
@@ -64,7 +64,7 @@ int main(int argc, char**argv) {
 
     // Se crean los hilos
     for (int i = 0; i < H; i++)
-        pthread_create(&threads[i],NULL,send_request,NULL);
+        pthread_create(&threads[i],NULL,client,NULL);
     for (int i = 0; i < H; i++)
         pthread_join(threads[i],NULL);
 
@@ -80,7 +80,7 @@ int main(int argc, char**argv) {
 }
 
 // Funcion que envia la solicitud GET y recibe el archivo solicitado
-void * send_request(){
+void * client(){
 
     int sockfd;
     long int temp;
@@ -93,7 +93,7 @@ void * send_request(){
 
         // Empieza tiempo atencion
         inicio_atencion = time(NULL);
-        // sleep(2); // Para probar con pocas solicitudes
+        // sleep(3); // Para probar con pocas solicitudes
 
         // Se recibe el archivo
         memset(&buffer, 0, sizeof(buffer));
@@ -175,40 +175,33 @@ int create_request(char * dir, char * port, char * R) {
 void mostrar_estadisticas() {
 
     int total_requests = T*H;
-    ssize_t total_espera=0;
-    ssize_t total_atencion=0;
-    ssize_t espera_promedio=0;
-    ssize_t atencion_promedio=0;
-    ssize_t varianza_espera=0;
-    ssize_t varianza_atencion=0;
+    long double total_espera=0;
+    long double total_atencion=0;
+    long double espera_promedio=0;
+    long double atencion_promedio=0;
+    long double varianza_espera=0;
+    long double varianza_atencion=0;
 
-    // Calculo del total de tiempo de atencion
-    for (int i = 0; i < total_requests; i++)
-        total_atencion += tiempos_atencion[i];
-    atencion_promedio = total_atencion / total_requests;
-
-    // Calculo del total de tiempo de espera
-    for (int i = 0; i < total_requests; i++)
-        total_espera += tiempos_espera[i];
-    espera_promedio = total_espera / total_requests;
-
-    // Calculo de la varianza en tiempos de atencion
-    for (int i = 0; i < total_requests; i++)
+    for (int i = 0; i < total_requests; i++){
+        total_atencion += tiempos_atencion[i];  // Calculo del total de tiempo de atencion
+        total_espera += tiempos_espera[i];  // Calculo del total de tiempo de espera
+        // Calculo de la varianza en tiempos de atencion
         varianza_atencion += (tiempos_atencion[i] - atencion_promedio) * (tiempos_atencion[i] - atencion_promedio);
-    varianza_atencion /= total_requests;
-
-    // Calculo de la varianza en tiempos de espera
-    for (int i = 0; i < total_requests; i++)
+        // Calculo de la varianza en tiempos de espera
         varianza_espera += (tiempos_espera[i] - espera_promedio) * (tiempos_espera[i] - espera_promedio);
-    varianza_espera /= total_requests;
+    }
+    atencion_promedio = total_atencion / total_requests;    // Calculo de tiempo de atencion promedio
+    espera_promedio = total_espera / total_requests;    // Calculo de tiempo de espera promedio
+    varianza_atencion /= total_requests;    // Calculo de la varianza en tiempos de atencion
+    varianza_espera /= total_requests;  // Calculo de la varianza en tiempos de espera
 
     // Se muestran las estadisticas en pantalla
-    printf("\nTiempo total de atencion: %ld segundos\n", total_atencion);
-    printf("Tiempo total de espera: %ld segundos\n", total_espera);
-    printf("Tiempo de atencion promedio: %ld segundos\n", atencion_promedio);
-    printf("Tiempo de espera promedio: %ld segundos\n", espera_promedio);
-    printf("Varianza en el tiempo de atencion: %ld\n", varianza_atencion);
-    printf("Varianza de tiempos de espera: %ld\n", varianza_espera);
+    printf("\nTiempo total de atencion: %Lf segundos\n", total_atencion);
+    printf("Tiempo total de espera: %Lf segundos\n", total_espera);
+    printf("Tiempo de atencion promedio: %Lf segundos\n", atencion_promedio);
+    printf("Tiempo de espera promedio: %Lf segundos\n", espera_promedio);
+    printf("Varianza en el tiempo de atencion: %Lf\n", varianza_atencion);
+    printf("Varianza de tiempos de espera: %Lf\n", varianza_espera);
     printf("Bytes recibidos: %ld\n\n", received);
 }
 
